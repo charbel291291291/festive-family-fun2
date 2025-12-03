@@ -1306,6 +1306,10 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
+  /* tablet: use 3 columns for briefcase grid */
+  .briefcase-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* More mobile UX enhancements */
@@ -1337,8 +1341,12 @@ body {
     font-size: 14px;
     min-height: 76px;
   }
-  .briefcase-label { font-size: 12px; }
-  .briefcase-value { font-size: 14px; }
+  .briefcase-label {
+    font-size: 12px;
+  }
+  .briefcase-value {
+    font-size: 14px;
+  }
 
   /* Make bank panel sticky so controls are accessible */
   .bank-panel {
@@ -1402,10 +1410,15 @@ body {
   }
 
   /* Slightly smaller bank offer box on phones */
-  .bank-offer { font-size: 1.15rem; }
+  .bank-offer {
+    font-size: 1.15rem;
+  }
 
   /* Briefcase tag smaller */
-  .briefcase-tag { font-size: 10px; padding: 2px 6px; }
+  .briefcase-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
 }
 
 /* Accessibility: focus states for interactive elements */
