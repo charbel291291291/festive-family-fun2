@@ -1,0 +1,4 @@
+node_modules/
+dist/
+src/integrations/supabase/types.ts
+src/integrations/supabase/types.d.ts
