@@ -1520,3 +1520,46 @@ button:focus,
     border-radius: 24px;
   }
 }
+
+/* === Deal screen specific mobile overrides === */
+@media (max-width: 640px) {
+  .deal-layout {
+    display: flex; /* switch to flex column for stacking */
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .deal-cases-card,
+  .bank-panel,
+  .amounts-panel {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* Make cases compact on mobile */
+  .deal-cases-card .briefcase-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .deal-cases-card .briefcase {
+    padding: 8px 0;
+    font-size: 12px;
+  }
+
+  /* Remaining amounts: keep 2 columns even on small screens */
+  .amounts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .amount-pill {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .bank-panel {
+    padding: 16px 14px;
+  }
+}
