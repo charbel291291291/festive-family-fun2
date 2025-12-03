@@ -13,6 +13,216 @@ body {
   color: #e5e7eb; /* slate-200 text */
 }
 
+/* === DEAL OR NO DEAL SCREEN === */
+
+.deal-screen {
+  width: 100%;
+}
+
+.deal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.deal-title-main {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #facc15;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
+}
+
+.deal-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.deal-cases-card {
+  flex: 3;
+  background: radial-gradient(circle at top, #111827 0, #020617 60%, #000 100%);
+  border-radius: 26px;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(15, 23, 42, 0.9);
+  padding: 20px 24px 24px;
+}
+
+.deal-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #e5e7eb;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.deal-cases-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  justify-items: center;
+}
+
+.deal-case-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(145deg, #fb923c, #ea580c);
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.75),
+    0 0 12px rgba(251, 146, 60, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #f9fafb;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.deal-case-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 14px 24px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(251, 146, 60, 0.7);
+}
+
+.deal-case-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(251, 146, 60, 0.5);
+}
+
+.deal-case-btn.opened {
+  background: linear-gradient(145deg, #374151, #111827);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9);
+  cursor: default;
+}
+
+.deal-case-btn.selected {
+  outline: 3px solid #facc15;
+  box-shadow:
+    0 0 18px rgba(250, 204, 21, 0.9),
+    0 0 32px rgba(251, 191, 36, 0.6);
+}
+
+.deal-case-number {
+  font-size: 20px;
+  font-weight: 800;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9);
+}
+
+.deal-case-icon {
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+.deal-bank-card {
+  flex: 2;
+  padding: 18px 18px 20px;
+  border-radius: 26px;
+  background: radial-gradient(circle at 20% 0%, #0f172a 0, #020617 55%, #020617 100%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(15, 23, 42, 0.9);
+}
+
+.amounts-title {
+  margin-top: 16px;
+}
+
+.deal-amounts-board {
+  margin-top: 10px;
+  padding: 14px 10px 16px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.85), #020617 70%),
+    radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.75), #020617 70%);
+  box-shadow:
+    0 0 16px rgba(37, 99, 235, 0.9),
+    inset 0 0 14px rgba(15, 23, 42, 0.95);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.deal-amounts-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deal-amount-pill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #111827;
+  background: linear-gradient(135deg, #facc15, #f97316);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(250, 204, 21, 0.7);
+}
+
+.deal-amount-pill.opened {
+  background: linear-gradient(135deg, #4b5563, #111827);
+  color: #e5e7eb;
+  box-shadow: none;
+}
+
+/* === MOBILE ADAPTATION for DEAL screen === */
+
+@media (max-width: 640px) {
+  .deal-layout {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .deal-cases-card,
+  .deal-bank-card {
+    width: 100%;
+    margin: 0;
+  }
+
+  .deal-cases-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .deal-case-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+
+  .deal-case-number {
+    font-size: 16px;
+  }
+
+  .deal-amounts-board {
+    flex-direction: row;
+    padding: 10px 8px 12px;
+  }
+
+  .deal-amount-pill {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+}
+
+
 #root {
   min-height: 100vh;
 }

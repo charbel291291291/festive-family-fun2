@@ -177,13 +177,19 @@ export function DealScreen({
   const formatChips = (amount: number | null) =>
     amount == null ? "-" : `${amount.toLocaleString()} chips`;
 
+  // unified case click handler to pick/open depending on state
+  const handleCaseClick = (id: number) => {
+    if (stage === "pick") return handlePickCase(id);
+    return handleOpenCase(id);
+  };
+
   return (
     <div className="app-container deal-screen">
-      <header className="app-header">
+      <header className="app-header deal-header">
         <button className="btn-secondary" onClick={onBackHome}>
           ⬅ Back home
         </button>
-        <h1 className="title-glow">🎁 Deal or No Deal</h1>
+        <h1 className="deal-title-main">Deal</h1>
         {typeof walletBalance === "number" && (
           <div className="text-xs text-slate-200">
             💰 Chips: <strong>{walletBalance.toLocaleString()}</strong>
@@ -194,7 +200,7 @@ export function DealScreen({
       <main className="deal-layout">
         {/* Left side: cases grid */}
         <section className="glass-card deal-cases-card">
-          <h2 className="section-title">
+          <h2 className="deal-section-title">
             {stage === "pick"
               ? "Pick your case"
               : "Open cases and watch the amounts disappear"}
@@ -210,16 +216,16 @@ export function DealScreen({
               "Game over. Compare the deal with what was in your case."}
           </p>
 
-          <div className="briefcase-grid">
+          <div className="deal-cases-grid">
             {cases.map((c) => {
-              const isPlayerCase = c.id === playerCaseId;
+              const isSelected = c.id === playerCaseId;
               const isOpened = opened.includes(c.id);
-              const showAmount = isOpened && !isPlayerCase;
+              const showAmount = isOpened && !isSelected;
 
               const classNames = [
-                "briefcase",
-                isPlayerCase ? "briefcase--player" : "",
-                isOpened ? "briefcase--open" : "",
+                "deal-case-btn",
+                isSelected ? "selected" : "",
+                isOpened ? "opened" : "",
               ]
                 .filter(Boolean)
                 .join(" ");
@@ -228,25 +234,16 @@ export function DealScreen({
                 <button
                   key={c.id}
                   className={classNames}
-                  onClick={() =>
-                    stage === "pick"
-                      ? handlePickCase(c.id)
-                      : handleOpenCase(c.id)
-                  }
+                  onClick={() => handleCaseClick(c.id)}
                   disabled={
                     (stage === "pick" && playerCaseId !== null) ||
-                    (stage !== "pick" && (isOpened || isPlayerCase)) ||
+                    (stage !== "pick" && (isOpened || isSelected)) ||
                     stage === "offer" ||
                     stage === "finished"
                   }
                 >
-                  <span className="briefcase-label">#{c.id}</span>
-                  <span className="briefcase-value">
-                    {showAmount ? formatChips(c.amount) : "🎁"}
-                  </span>
-                  {isPlayerCase && (
-                    <span className="briefcase-tag">Your case</span>
-                  )}
+                  <span className="deal-case-number">#{c.id}</span>
+                  <span className="deal-case-icon">{showAmount ? formatChips(c.amount) : "🎁"}</span>
                 </button>
               );
             })}
@@ -259,9 +256,9 @@ export function DealScreen({
           )}
         </section>
 
-        {/* Middle: bank panel */}
-        <section className="glass-card bank-panel">
-          <h2 className="section-title">Bank & Result</h2>
+        {/* Right: bank panel */}
+        <section className="glass-card deal-bank-card">
+          <h2 className="deal-section-title">Bank & Result</h2>
           <p className="helper-text">
             Your chips:{" "}
             <strong>
@@ -322,26 +319,38 @@ export function DealScreen({
           </div>
         </section>
 
-        {/* Right: amounts panel */}
-        <section className="glass-card amounts-panel">
-          <h2 className="section-title">Remaining amounts</h2>
-          <div className="amounts-grid">
-            {AMOUNTS.map((amt) => {
+        {/* Remaining amounts on the bank card */}
+        <h3 className="deal-section-title amounts-title">Remaining amounts</h3>
+        <div className="deal-amounts-board">
+          <div className="deal-amounts-column">
+            {LEFT_AMOUNTS.map((value) => {
               const stillInPlay =
-                amt === playerCase?.amount || remainingAmounts.includes(amt);
+                value === playerCase?.amount || remainingAmounts.includes(value);
               return (
                 <div
-                  key={amt}
-                  className={
-                    "amount-pill" + (stillInPlay ? "" : " amount-pill--gone")
-                  }
+                  key={value}
+                  className={"deal-amount-pill" + (stillInPlay ? "" : " opened")}
                 >
-                  {formatChips(amt)}
+                  {formatChips(value)}
                 </div>
               );
             })}
           </div>
-        </section>
+          <div className="deal-amounts-column">
+            {RIGHT_AMOUNTS.map((value) => {
+              const stillInPlay =
+                value === playerCase?.amount || remainingAmounts.includes(value);
+              return (
+                <div
+                  key={value}
+                  className={"deal-amount-pill" + (stillInPlay ? "" : " opened")}
+                >
+                  {formatChips(value)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
         {/* right amounts removed; amounts are now rendered in the amounts-grid */}
       </main>
     </div>
