@@ -178,7 +178,7 @@ export function DealScreen({
     amount == null ? "-" : `${amount.toLocaleString()} chips`;
 
   return (
-    <div className="app-container">
+    <div className="app-container deal-screen">
       <header className="app-header">
         <button className="btn-secondary" onClick={onBackHome}>
           ⬅ Back home
@@ -259,8 +259,8 @@ export function DealScreen({
           )}
         </section>
 
-        {/* Right side: bank + amounts list */}
-        <section className="glass-card deal-side-card">
+        {/* Middle: bank panel */}
+        <section className="glass-card bank-panel">
           <h2 className="section-title">Bank & Result</h2>
           <p className="helper-text">
             Your chips:{" "}
@@ -269,7 +269,7 @@ export function DealScreen({
             </strong>
           </p>
 
-          <div className="bank-panel">
+          <div>
             {stage === "offer" && offer != null && (
               <>
                 <p className="helper-text">The bank offers you:</p>
@@ -320,43 +320,29 @@ export function DealScreen({
               </p>
             )}
           </div>
+        </section>
 
-          <h3 className="section-title amounts-title">Remaining amounts</h3>
-          <div className={`amounts-list`}>
-            <div className="amounts-column">
-              {LEFT_AMOUNTS.map((amt) => {
-                const stillInPlay =
-                  amt === playerCase?.amount || remainingAmounts.includes(amt);
-                return (
-                  <div
-                    key={amt}
-                    className={
-                      "amount-pill" + (stillInPlay ? "" : " amount-pill--gone")
-                    }
-                  >
-                    {formatChips(amt)}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="amounts-column">
-              {RIGHT_AMOUNTS.map((amt) => {
-                const stillInPlay =
-                  amt === playerCase?.amount || remainingAmounts.includes(amt);
-                return (
-                  <div
-                    key={amt}
-                    className={
-                      "amount-pill" + (stillInPlay ? "" : " amount-pill--gone")
-                    }
-                  >
-                    {formatChips(amt)}
-                  </div>
-                );
-              })}
-            </div>
+        {/* Right: amounts panel */}
+        <section className="glass-card amounts-panel">
+          <h2 className="section-title">Remaining amounts</h2>
+          <div className="amounts-grid">
+            {AMOUNTS.map((amt) => {
+              const stillInPlay =
+                amt === playerCase?.amount || remainingAmounts.includes(amt);
+              return (
+                <div
+                  key={amt}
+                  className={
+                    "amount-pill" + (stillInPlay ? "" : " amount-pill--gone")
+                  }
+                >
+                  {formatChips(amt)}
+                </div>
+              );
+            })}
           </div>
         </section>
+        {/* right amounts removed; amounts are now rendered in the amounts-grid */}
       </main>
     </div>
   );
