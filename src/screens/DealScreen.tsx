@@ -243,7 +243,9 @@ export function DealScreen({
                   }
                 >
                   <span className="deal-case-number">#{c.id}</span>
-                  <span className="deal-case-icon">{showAmount ? formatChips(c.amount) : "🎁"}</span>
+                  <span className="deal-case-icon">
+                    {showAmount ? formatChips(c.amount) : "🎁"}
+                  </span>
                 </button>
               );
             })}
@@ -317,40 +319,46 @@ export function DealScreen({
               </p>
             )}
           </div>
+          <h3 className="deal-section-title amounts-title">
+            Remaining amounts
+          </h3>
+          <div className="deal-amounts-board">
+            <div className="deal-amounts-column">
+              {LEFT_AMOUNTS.map((value) => {
+                const stillInPlay =
+                  value === playerCase?.amount ||
+                  remainingAmounts.includes(value);
+                return (
+                  <div
+                    key={value}
+                    className={
+                      "deal-amount-pill" + (stillInPlay ? "" : " opened")
+                    }
+                  >
+                    {formatChips(value)}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="deal-amounts-column">
+              {RIGHT_AMOUNTS.map((value) => {
+                const stillInPlay =
+                  value === playerCase?.amount ||
+                  remainingAmounts.includes(value);
+                return (
+                  <div
+                    key={value}
+                    className={
+                      "deal-amount-pill" + (stillInPlay ? "" : " opened")
+                    }
+                  >
+                    {formatChips(value)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
-
-        {/* Remaining amounts on the bank card */}
-        <h3 className="deal-section-title amounts-title">Remaining amounts</h3>
-        <div className="deal-amounts-board">
-          <div className="deal-amounts-column">
-            {LEFT_AMOUNTS.map((value) => {
-              const stillInPlay =
-                value === playerCase?.amount || remainingAmounts.includes(value);
-              return (
-                <div
-                  key={value}
-                  className={"deal-amount-pill" + (stillInPlay ? "" : " opened")}
-                >
-                  {formatChips(value)}
-                </div>
-              );
-            })}
-          </div>
-          <div className="deal-amounts-column">
-            {RIGHT_AMOUNTS.map((value) => {
-              const stillInPlay =
-                value === playerCase?.amount || remainingAmounts.includes(value);
-              return (
-                <div
-                  key={value}
-                  className={"deal-amount-pill" + (stillInPlay ? "" : " opened")}
-                >
-                  {formatChips(value)}
-                </div>
-              );
-            })}
-          </div>
-        </div>
         {/* right amounts removed; amounts are now rendered in the amounts-grid */}
       </main>
     </div>
