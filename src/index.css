@@ -45,9 +45,7 @@ body {
   flex: 3;
   background: radial-gradient(circle at top, #111827 0, #020617 60%, #000 100%);
   border-radius: 26px;
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.9),
-    0 0 40px rgba(15, 23, 42, 0.9);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9), 0 0 40px rgba(15, 23, 42, 0.9);
   padding: 20px 24px 24px;
 }
 
@@ -76,9 +74,7 @@ body {
   border: none;
   cursor: pointer;
   background: linear-gradient(145deg, #fb923c, #ea580c);
-  box-shadow:
-    0 10px 18px rgba(0, 0, 0, 0.75),
-    0 0 12px rgba(251, 146, 60, 0.55);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.75), 0 0 12px rgba(251, 146, 60, 0.55);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -91,16 +87,12 @@ body {
 .deal-case-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   filter: brightness(1.05);
-  box-shadow:
-    0 14px 24px rgba(0, 0, 0, 0.9),
-    0 0 14px rgba(251, 146, 60, 0.7);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.9), 0 0 14px rgba(251, 146, 60, 0.7);
 }
 
 .deal-case-btn:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.8),
-    0 0 8px rgba(251, 146, 60, 0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8), 0 0 8px rgba(251, 146, 60, 0.5);
 }
 
 .deal-case-btn.opened {
@@ -111,9 +103,7 @@ body {
 
 .deal-case-btn.selected {
   outline: 3px solid #facc15;
-  box-shadow:
-    0 0 18px rgba(250, 204, 21, 0.9),
-    0 0 32px rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.9), 0 0 32px rgba(251, 191, 36, 0.6);
 }
 
 .deal-case-number {
@@ -131,10 +121,13 @@ body {
   flex: 2;
   padding: 18px 18px 20px;
   border-radius: 26px;
-  background: radial-gradient(circle at 20% 0%, #0f172a 0, #020617 55%, #020617 100%);
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.9),
-    0 0 40px rgba(15, 23, 42, 0.9);
+  background: radial-gradient(
+    circle at 20% 0%,
+    #0f172a 0,
+    #020617 55%,
+    #020617 100%
+  );
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9), 0 0 40px rgba(15, 23, 42, 0.9);
 }
 
 .amounts-title {
@@ -145,11 +138,13 @@ body {
   margin-top: 10px;
   padding: 14px 10px 16px;
   border-radius: 20px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.85), #020617 70%),
+  background: radial-gradient(
+      circle at 20% 20%,
+      rgba(59, 130, 246, 0.85),
+      #020617 70%
+    ),
     radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.75), #020617 70%);
-  box-shadow:
-    0 0 16px rgba(37, 99, 235, 0.9),
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.9),
     inset 0 0 14px rgba(15, 23, 42, 0.95);
   display: flex;
   gap: 10px;
@@ -171,9 +166,7 @@ body {
   text-align: center;
   color: #111827;
   background: linear-gradient(135deg, #facc15, #f97316);
-  box-shadow:
-    0 6px 12px rgba(0, 0, 0, 0.7),
-    0 0 10px rgba(250, 204, 21, 0.7);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.7), 0 0 10px rgba(250, 204, 21, 0.7);
 }
 
 .deal-amount-pill.opened {
@@ -222,6 +215,42 @@ body {
   }
 }
 
+/* Mobile bottom action bar for Deal screen */
+.deal-action-bar {
+  display: none; /* hidden by default; show on mobile below */
+}
+
+@media (max-width: 640px) {
+  .deal-action-bar {
+    display: flex;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 10px;
+    z-index: 9999;
+    padding: 8px;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(3,8,5,0.9), rgba(3,8,5,0.85));
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+  .deal-action-bar .btn-primary,
+  .deal-action-bar .btn-danger {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .deal-action-bar .btn-primary {
+    margin-right: 8px;
+  }
+  .deal-action-bar .btn-danger {
+    margin-left: 0;
+  }
+}
 
 #root {
   min-height: 100vh;

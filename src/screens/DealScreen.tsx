@@ -361,6 +361,37 @@ export function DealScreen({
         </section>
         {/* right amounts removed; amounts are now rendered in the amounts-grid */}
       </main>
+
+      {/* Mobile bottom action bar (always visible on small screens) */}
+      <div className="deal-action-bar" role="toolbar" aria-label="deal actions">
+        {stage === "offer" && offer != null && (
+          <>
+            <button
+              className="btn-primary"
+              onClick={handleTakeDeal}
+              aria-label="Take the deal"
+            >
+              🤝 Deal
+            </button>
+            <button
+              className="btn-danger"
+              onClick={handleNoDeal}
+              aria-label="Reject the deal"
+            >
+              ❌ No Deal
+            </button>
+          </>
+        )}
+        {stage === "finished" && (
+          <button
+            className="btn-primary"
+            onClick={handlePlayAgain}
+            aria-label="Play again"
+          >
+            🔁 Play again
+          </button>
+        )}
+      </div>
     </div>
   );
 }
