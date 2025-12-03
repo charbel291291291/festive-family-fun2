@@ -63,18 +63,6 @@ body {
   margin: 0.35rem auto;
   padding: 12px 24px;
   border-radius: 999px;
-  .amounts-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .amounts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 8px;
-  }
   border: none;
   background: linear-gradient(135deg, #e11d48, #f97316);
   color: #f9fafb;
@@ -1318,6 +1306,113 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
+}
+
+/* More mobile UX enhancements */
+@media (max-width: 640px) {
+  .title-glow {
+    font-size: 1.25rem;
+  }
+
+  /* Make header buttons easier to tap */
+  .btn-secondary,
+  .btn-primary,
+  .btn-danger {
+    padding: 12px 16px;
+    font-size: 1rem;
+  }
+
+  .app-card {
+    padding: 16px 12px;
+  }
+
+  /* Bigger briefcases and two columns for the grid */
+  .briefcase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .briefcase {
+    padding: 14px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    min-height: 76px;
+  }
+  .briefcase-label { font-size: 12px; }
+  .briefcase-value { font-size: 14px; }
+
+  /* Make bank panel sticky so controls are accessible */
+  .bank-panel {
+    position: sticky;
+    top: 8px;
+    z-index: 10;
+    width: 100%;
+  }
+
+  /* Stack buttons and make them full width on mobile */
+  .buttons-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .buttons-row .btn-primary,
+  .buttons-row .btn-danger {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+  }
+
+  /* Amount pills larger for touch */
+  .amounts-grid .amount-pill {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* On very small screens, make amounts one column for readability */
+  @media (max-width: 420px) {
+    .amounts-grid {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    .briefcase-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .app-header .title-glow {
+    text-align: center;
+    width: 100%;
+  }
+  .app-header .btn-secondary {
+    align-self: flex-start;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+
+  /* Limit amounts list height for mobile and allow scroll */
+  .amounts-panel {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  /* Slightly smaller bank offer box on phones */
+  .bank-offer { font-size: 1.15rem; }
+
+  /* Briefcase tag smaller */
+  .briefcase-tag { font-size: 10px; padding: 2px 6px; }
+}
+
+/* Accessibility: focus states for interactive elements */
+button:focus,
+.briefcase:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25);
 }
 
 /* Wallet pill */
