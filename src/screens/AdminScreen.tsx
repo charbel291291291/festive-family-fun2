@@ -9,6 +9,7 @@ import type {
   TombolaWin,
 } from "@/tombola";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { useWallet } from "@/context/WalletContext";
 import { useTombolaDraws } from "@/hooks/useTombolaDraws";
 import { useTombolaWins } from "@/hooks/useTombolaWins";
 import { useRoomPlayers } from "@/hooks/useRoomPlayers";
@@ -21,8 +22,6 @@ interface AdminScreenProps {
   onBackHome: () => void;
   buyCode?: string | null;
   onSetBuyCode?: (code: string | null) => void;
-  systemWalletUserId?: string | null;
-  onSetSystemWallet?: (uid: string | null) => void;
 }
 
 interface BuyRequest {
@@ -64,9 +63,8 @@ export function AdminScreen({
   onBackHome,
   buyCode,
   onSetBuyCode,
-  systemWalletUserId,
-  onSetSystemWallet,
 }: AdminScreenProps) {
+  const { systemWalletUserId, setSystemWalletUserId } = useWallet();
   const { drawnNumbers, lastDraw } = useTombolaDraws(room.id);
 
   // PRIZE_AMOUNTS imported from shared config
@@ -577,7 +575,7 @@ export function AdminScreen({
                   <button
                     className="btn-secondary mr-2"
                     onClick={() => {
-                      if (onSetSystemWallet) onSetSystemWallet(null);
+                      setSystemWalletUserId(null);
                     }}
                   >
                     Clear system wallet
@@ -890,7 +888,7 @@ export function AdminScreen({
                         <button
                           className="btn-secondary mr-2"
                           onClick={async () => {
-                            if (!onSetSystemWallet) return;
+                            if (!setSystemWalletUserId) return;
                             try {
                               const { data: profile } = await supabase
                                 .from("profiles")
@@ -903,7 +901,7 @@ export function AdminScreen({
                                 );
                                 return;
                               }
-                              onSetSystemWallet(profile.id);
+                              setSystemWalletUserId(profile.id);
                               alert(
                                 `System wallet set to ${profile.display_name}`
                               );

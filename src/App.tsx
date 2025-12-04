@@ -6,6 +6,7 @@ import {
 } from "@/config/admin";
 import type { Role, Room, Player, TombolaCard, Wallet } from "@/tombola";
 import { chipStore } from "@/lib/chipStore";
+import { useWallet } from "@/context/WalletContext";
 import {
   updateWalletAndInsertTransaction,
   buyTicketAtomic,
@@ -118,10 +119,18 @@ const App: React.FC = () => {
   const [playerCard, setPlayerCard] = useState<TombolaCard | null>(null);
   const [joining, setJoining] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  // WALLET
+  // WALLET (App-level UI state still tracked; wallet logic prefers WalletContext)
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const {
+    addChips,
+    deductChips,
+    transferFromSystemToWallet,
+    balance: ctxBalance,
+    isLoading: ctxIsLoading,
+    error: ctxError,
+  } = useWallet();
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [buyAmount, setBuyAmount] = useState<number>(1000);
   const [buying, setBuying] = useState(false);
@@ -137,10 +146,7 @@ const App: React.FC = () => {
   const [pendingBuyRequestId, setPendingBuyRequestId] = useState<string | null>(
     null
   );
-  // System wallet (auth user id) – when set, payouts are debited from this wallet
-  const [systemWalletUserId, setSystemWalletUserId] = useState<string | null>(
-    null
-  );
+  // System wallet (auth user id) is now managed in WalletContext
 
   useEffect(() => {
     const storedName = getStoredPlayerName();
@@ -291,96 +297,30 @@ const App: React.FC = () => {
 
   // credit chips helper used by games (server wallet if available; local fallback)
   const creditChips = async (amount: number) => {
-    if (!wallet || amount <= 0) return;
-
-    // local wallet -> update local store
-    if (wallet.user_id === "local" || wallet.id === "local") {
-      try {
-        chipStore.addChips(amount, `Game credit +${amount}`);
-        const newW = chipStore.getWallet();
-        setWallet({
-          id: newW.id,
-          user_id: newW.user_id ?? "local",
-          balance: newW.balance,
-          created_at: newW.created_at,
-        } as Wallet);
-      } catch (err) {
-        console.error("Failed to credit local wallet:", err);
-      }
-      return;
-    }
-
-    // server wallet – update balance on chip_wallets via RPC (atomic + transaction)
+    if (amount <= 0) return;
     try {
-      const updated = await updateWalletAndInsertTransaction(
-        wallet.id,
-        amount,
-        "buy",
-        `Credit ${amount} chips`
-      );
-      setWallet(updated as Wallet);
+      await addChips(amount);
     } catch (err) {
-      console.error("Failed to credit chips:", err);
-      // silently fail for now – family game
+      console.error("Failed to credit chips via context:", err);
     }
   };
 
   // Transfer amount from a configured system wallet (by user id) to a destination wallet id.
   // If no system wallet is configured, falls back to a direct credit on the destination wallet.
-  const transferFromSystemToWallet = async (
+  const transferFromSystemToWalletLocal = async (
     destWalletId: string,
     amount: number,
     description = ""
   ): Promise<boolean> => {
-    if (amount <= 0) return true;
-    // If no system wallet configured, just credit the destination wallet.
-    if (!systemWalletUserId) {
-      try {
-        const updated = await updateWalletAndInsertTransaction(
-          destWalletId,
-          amount,
-          "win",
-          description || "Payout"
-        );
-        // update local state if this is the user's wallet
-        if (wallet?.id === destWalletId) setWallet(updated as Wallet);
-        return true;
-      } catch (err) {
-        console.error("Failed to credit destination wallet:", err);
-        return false;
-      }
-    }
-
+    // Use walletCtx.transferFromSystemToWallet
+    if (!wallet) return false;
     try {
-      // find system wallet entry
-      const { data: sysWallet, error: swErr } = await supabase
-        .from("chip_wallets")
-        .select("*")
-        .eq("user_id", systemWalletUserId)
-        .maybeSingle();
-      if (swErr) throw swErr;
-      if (!sysWallet) throw new Error("System wallet not found");
-
-      const sysWalletId = (sysWallet as Wallet).id;
-
-      // debit system wallet
-      await updateWalletAndInsertTransaction(
-        sysWalletId,
-        -amount,
-        "admin_adjustment",
-        description || "System payout"
-      );
-
-      // credit destination wallet
-      const updated = await updateWalletAndInsertTransaction(
+      return await transferFromSystemToWallet(
         destWalletId,
         amount,
-        "win",
-        description || "Payout from system"
+        undefined,
+        description
       );
-
-      if (wallet?.id === destWalletId) setWallet(updated as Wallet);
-      return true;
     } catch (err) {
       console.error("Failed to transfer from system wallet:", err);
       return false;
@@ -409,16 +349,16 @@ const App: React.FC = () => {
       }
       return success;
     }
-
-    // server wallet – deduct via RPC (atomic + transaction)
+    // server wallet – deduct via WalletContext
     try {
-      const updated = await updateWalletAndInsertTransaction(
-        wallet.id,
-        -amount,
-        "lose",
-        `Debit ${amount} chips`
-      );
-      setWallet(updated as Wallet);
+      await deductChips(amount);
+      // refresh local wallet state if present
+      const { data: updated } = await supabase
+        .from("chip_wallets")
+        .select("*")
+        .eq("id", wallet.id)
+        .maybeSingle();
+      if (updated) setWallet(updated as Wallet);
       return true;
     } catch (err) {
       console.error("Failed to debit chips:", err);
@@ -426,38 +366,22 @@ const App: React.FC = () => {
     }
   };
 
-  // charge chips helper used by games (buy ticket, entry, etc.)
   const chargeChips = async (
     amount: number,
     description = ""
   ): Promise<boolean> => {
-    if (!wallet || amount <= 0) return false;
-    if (wallet.user_id === "local" || wallet.id === "local") {
-      // local wallet – deduct via chipStore
-      const success = chipStore.deductChips(
-        amount,
-        description || "Game purchase"
-      );
-      if (success) {
-        const newW = chipStore.getWallet();
-        setWallet({
-          id: newW.id,
-          user_id: newW.user_id ?? "local",
-          balance: newW.balance,
-          created_at: newW.created_at,
-        } as Wallet);
-      }
-      return success;
-    }
-
+    if (amount <= 0) return false;
     try {
-      const updated = await updateWalletAndInsertTransaction(
-        wallet.id,
-        -amount,
-        "lose",
-        description || "Game purchase"
-      );
-      setWallet(updated as Wallet);
+      await deductChips(amount);
+      // refresh local wallet state
+      if (wallet && wallet.id) {
+        const { data: updated } = await supabase
+          .from("chip_wallets")
+          .select("*")
+          .eq("id", wallet.id)
+          .maybeSingle();
+        if (updated) setWallet(updated as Wallet);
+      }
       return true;
     } catch (err) {
       console.error("Failed to charge chips", err);
@@ -734,7 +658,13 @@ const App: React.FC = () => {
         finalPlayer = existingPlayer as Player;
       } else {
         // first time this device joins this room -> charge entry fee
-        const ok = await debitChips(TOMBOLA_ENTRY_FEE);
+        let ok = false;
+        try {
+          await deductChips(TOMBOLA_ENTRY_FEE);
+          ok = true;
+        } catch (err) {
+          ok = false;
+        }
         if (!ok) {
           setPlayerError(
             `Not enough chips to join. You need at least ${TOMBOLA_ENTRY_FEE.toLocaleString()} chips.`
@@ -1090,15 +1020,20 @@ const App: React.FC = () => {
       {renderSnow()}
       <div className="app-card app-card-glow">
         <div className="wallet-pill">
-          {walletLoading && <span>💰 Loading chips…</span>}
-          {!walletLoading && wallet && (
+          {(ctxIsLoading || walletLoading) && <span>💰 Loading chips…</span>}
+          {!ctxIsLoading && (ctxBalance ?? wallet?.balance) != null && (
             <span>
-              💰 Chips: <strong>{wallet.balance.toLocaleString()}</strong>
+              💰 Chips:{" "}
+              <strong>
+                {(ctxBalance ?? wallet?.balance)?.toLocaleString()}
+              </strong>
             </span>
           )}
-          {!walletLoading && !wallet && walletError && (
-            <span>⚠️ {walletError}</span>
-          )}
+          {!ctxIsLoading &&
+            (ctxBalance ?? wallet?.balance) == null &&
+            (ctxError ?? walletError) && (
+              <span>⚠️ {ctxError ?? walletError}</span>
+            )}
           <button
             className="btn-primary ml-3"
             onClick={() => setShowBuyModal(true)}
@@ -1116,8 +1051,6 @@ const App: React.FC = () => {
             onBackHome={goHome}
             buyCode={buyCode}
             onSetBuyCode={(c) => setBuyCode(c)}
-            systemWalletUserId={systemWalletUserId}
-            onSetSystemWallet={(uid) => setSystemWalletUserId(uid)}
           />
         )}
 
@@ -1137,45 +1070,13 @@ const App: React.FC = () => {
             player={player}
             card={playerCard}
             onBackHome={goHome}
-            walletBalance={wallet?.balance ?? null}
-            creditChips={creditChips}
-            chargeChips={chargeChips}
+            /* wallet operations are provided via WalletContext now */
             onBuyTicket={buyTicket}
             onOpenBuyModal={() => setShowBuyModal(true)}
           />
         )}
 
-        {screen === "deal" && (
-          <DealScreen
-            onBackHome={goHome}
-            walletBalance={wallet?.balance ?? null}
-            onRoundFinished={async (amount: number) => {
-              // credit winner: prefer to debit system wallet if configured
-              try {
-                if (
-                  systemWalletUserId &&
-                  wallet &&
-                  wallet.id &&
-                  wallet.user_id !== "local"
-                ) {
-                  // transfer from system to current player's wallet id
-                  await transferFromSystemToWallet(
-                    wallet.id,
-                    amount,
-                    "Deal or No Deal payout"
-                  );
-                } else {
-                  await creditChips(amount);
-                }
-              } catch (err) {
-                console.error("Failed to credit deal winner:", err);
-                // fallback to credit locally
-                await creditChips(amount);
-              }
-            }}
-            onEntryFee={debitChips}
-          />
-        )}
+        {screen === "deal" && <DealScreen onBackHome={goHome} />}
 
         {authModalOpen && (
           <div className="modal-overlay" onClick={() => closeAuthModal(false)}>
@@ -1270,7 +1171,7 @@ const App: React.FC = () => {
                     onClick={async () => {
                       setBuying(true);
                       try {
-                        await creditChips(buyAmount);
+                        await addChips(buyAmount);
                         setShowBuyModal(false);
                       } catch (err) {
                         console.error("Buy chips failed", err);
@@ -1458,7 +1359,7 @@ const App: React.FC = () => {
                           .update({ status: "completed" })
                           .eq("id", pendingBuyRequestId);
                         setPendingBuyRequestId(null);
-                        await creditChips(buyModalAmount);
+                        await addChips(buyModalAmount);
                         setShowBuyCodeModal(false);
                         setBuyModalAmount(null);
                         return;
@@ -1475,7 +1376,7 @@ const App: React.FC = () => {
                       alert("Invalid code. Ask host for the 4-digit code.");
                       return;
                     }
-                    await creditChips(buyModalAmount);
+                    await addChips(buyModalAmount);
                     setShowBuyCodeModal(false);
                     setBuyModalAmount(null);
                   }}

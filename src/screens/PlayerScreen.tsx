@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useWallet } from "@/context/WalletContext";
 import type { Room, Player, TombolaCard } from "@/tombola";
 import { useTombolaDraws } from "@/hooks/useTombolaDraws";
 import { useTombolaWins } from "@/hooks/useTombolaWins";
@@ -16,9 +17,9 @@ interface PlayerScreenProps {
   player: Player;
   card: TombolaCard;
   onBackHome: () => void;
-  walletBalance?: number | null;
-  creditChips?: (amount: number) => void | Promise<void>;
-  chargeChips?: (amount: number, description?: string) => Promise<boolean>;
+  walletBalance?: number | null; // legacy
+  creditChips?: (amount: number) => void | Promise<void>; // legacy
+  chargeChips?: (amount: number, description?: string) => Promise<boolean>; // legacy
   onBuyTicket?: (
     cost: number,
     cardNumbers: unknown
@@ -37,6 +38,7 @@ export function PlayerScreen({
   onBuyTicket,
   onOpenBuyModal,
 }: PlayerScreenProps) {
+  const { balance, addChips, deductChips } = useWallet();
   const {
     drawnNumbers,
     lastDraw,
@@ -219,9 +221,10 @@ export function PlayerScreen({
             Room <strong>{room.code}</strong> • You are{" "}
             <strong>{player.name}</strong>
           </p>
-          {typeof walletBalance === "number" && (
+          {typeof (balance ?? walletBalance) === "number" && (
             <div className="text-xs text-slate-200">
-              💰 Chips: <strong>{walletBalance.toLocaleString()}</strong>
+              💰 Chips:{" "}
+              <strong>{(balance ?? walletBalance)?.toLocaleString()}</strong>
             </div>
           )}
           {showCardModal && selectedCard && (
@@ -373,11 +376,11 @@ export function PlayerScreen({
             Stay ready – as soon as the host taps{" "}
             <strong>Draw Next Ball</strong>, your card updates instantly.
           </p>
-          {creditChips && (
+          {(addChips || creditChips) && (
             <div className="mt-3 text-center">
               <button
                 className="btn-small"
-                onClick={() => creditChips(100)}
+                onClick={() => (addChips ? addChips(100) : creditChips?.(100))}
                 title="Add 100 chips"
               >
                 +100 chips
@@ -460,11 +463,21 @@ export function PlayerScreen({
                       );
                       setTimeout(() => setLastBuyMessage(null), 4000);
                     }
-                  } else if (chargeChips) {
-                    const ok = await chargeChips(
-                      ticketCost,
-                      "Buy tombola ticket"
-                    );
+                  } else if (deductChips || chargeChips) {
+                    let ok = false;
+                    try {
+                      if (deductChips) {
+                        await deductChips(ticketCost);
+                        ok = true;
+                      } else if (chargeChips) {
+                        ok = await chargeChips(
+                          ticketCost,
+                          "Buy tombola ticket"
+                        );
+                      }
+                    } catch (err) {
+                      ok = false;
+                    }
                     setLastBuySuccess(ok);
                     if (ok) {
                       const newCardNumbers = generateCardNumbersLocal();
@@ -556,8 +569,11 @@ export function PlayerScreen({
             💳 Buy
           </button>
         )}
-        {creditChips && (
-          <button className="btn-secondary" onClick={() => creditChips(100)}>
+        {(addChips || creditChips) && (
+          <button
+            className="btn-secondary"
+            onClick={() => (addChips ? addChips(100) : creditChips?.(100))}
+          >
             +100
           </button>
         )}

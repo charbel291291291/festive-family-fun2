@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useWallet } from "@/context/WalletContext";
 
 interface DealScreenProps {
   onBackHome: () => void;
-  walletBalance: number | null;
-  onRoundFinished: (amount: number) => void | Promise<void>;
-  onEntryFee: (amount: number) => Promise<boolean>;
+  // legacy props (kept optional for backward compatibility)
+  walletBalance?: number | null;
+  onRoundFinished?: (amount: number) => void | Promise<void>;
+  onEntryFee?: (amount: number) => Promise<boolean>;
 }
 
 // amounts in "chips"
@@ -59,6 +61,14 @@ export function DealScreen({
   const [dealTaken, setDealTaken] = useState(false);
   const [settled, setSettled] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
+  const {
+    balance,
+    deductChips,
+    addChips,
+    systemWalletUserId,
+    transferFromSystemToWallet,
+    walletId,
+  } = useWallet();
 
   // reset everything when resetCounter changes
   useEffect(() => {
@@ -75,8 +85,16 @@ export function DealScreen({
   useEffect(() => {
     async function chargeEntry() {
       setEntryError(null);
-      const ok = await onEntryFee(DEAL_ENTRY_FEE);
-      if (!ok) {
+      try {
+        // prefer onEntryFee callback if provided (backwards compatibility)
+        if (onEntryFee) {
+          const ok = await onEntryFee(DEAL_ENTRY_FEE);
+          if (!ok) throw new Error("Insufficient chips");
+        } else {
+          // use wallet context
+          await deductChips(DEAL_ENTRY_FEE);
+        }
+      } catch (err) {
         setEntryError(
           `Not enough chips to play. You need ${DEAL_ENTRY_FEE.toLocaleString()} chips.`
         );
@@ -84,7 +102,7 @@ export function DealScreen({
       }
     }
     chargeEntry();
-  }, [resetCounter, onEntryFee]);
+  }, [resetCounter, onEntryFee, deductChips]);
 
   const playerCase = playerCaseId
     ? cases.find((c) => c.id === playerCaseId) || null
@@ -164,15 +182,43 @@ export function DealScreen({
     const winAmount = dealTaken && offer != null ? offer : playerAmount;
 
     if (winAmount > 0) {
-      try {
-        onRoundFinished(winAmount);
-      } catch (err) {
-        console.error("Failed to credit round winnings:", err);
-      }
+      (async () => {
+        try {
+          // prefer parent callback if present; otherwise use wallet context to credit
+          if (onRoundFinished) {
+            await onRoundFinished(winAmount);
+          } else {
+            // if a system wallet is configured, prefer to debit it and credit the user's wallet
+            if (systemWalletUserId && walletId) {
+              await transferFromSystemToWallet(
+                walletId,
+                winAmount,
+                undefined,
+                "Deal or No Deal payout"
+              );
+            } else {
+              await addChips(winAmount);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to credit round winnings:", err);
+        }
+      })();
     }
 
     setSettled(true);
-  }, [stage, settled, playerCase, dealTaken, offer, onRoundFinished]);
+  }, [
+    stage,
+    settled,
+    playerCase,
+    dealTaken,
+    offer,
+    onRoundFinished,
+    addChips,
+    systemWalletUserId,
+    transferFromSystemToWallet,
+    walletId,
+  ]);
 
   const formatChips = (amount: number | null) =>
     amount == null ? "-" : `${amount.toLocaleString()} chips`;
@@ -190,9 +236,10 @@ export function DealScreen({
           ⬅ Back home
         </button>
         <h1 className="deal-title-main">Deal</h1>
-        {typeof walletBalance === "number" && (
+        {typeof (balance ?? walletBalance) === "number" && (
           <div className="text-xs text-slate-200">
-            💰 Chips: <strong>{walletBalance.toLocaleString()}</strong>
+            💰 Chips:{" "}
+            <strong>{(balance ?? walletBalance)?.toLocaleString()}</strong>
           </div>
         )}
       </header>
@@ -264,7 +311,9 @@ export function DealScreen({
           <p className="helper-text">
             Your chips:{" "}
             <strong>
-              {walletBalance != null ? walletBalance.toLocaleString() : "—"}
+              {(balance ?? walletBalance) != null
+                ? (balance ?? walletBalance)?.toLocaleString()
+                : "—"}
             </strong>
           </p>
 

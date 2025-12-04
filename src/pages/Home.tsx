@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import WalletSection from "@/components/WalletSection";
 
 const Home: React.FC = () => {
   return (
@@ -12,6 +13,10 @@ const Home: React.FC = () => {
         <p className="text-center text-slate-200 mt-4">
           Welcome! Pick a game and celebrate the season 🎁❄️
         </p>
+
+        <div className="mt-6">
+          <WalletSection />
+        </div>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
