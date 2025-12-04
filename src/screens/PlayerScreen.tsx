@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import type { Room, Player, TombolaCard } from "@/tombola";
 import { useTombolaDraws } from "@/hooks/useTombolaDraws";
+import { useTombolaWins } from "@/hooks/useTombolaWins";
 import { speakNumber, resumeAudioContext } from "@/lib/audio";
 import { flyFromTo } from "@/lib/animations";
 import { LastDrawnBall } from "@/components/LastDrawnBall";
+import { getPrizeForKey, PrizeKey } from "@/lib/tombolaPrizes";
+import { useRoomPlayers } from "@/hooks/useRoomPlayers";
 import { AudioToggle } from "@/components/AudioToggle";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { useAudio } from "@/hooks/useAudio";
 
 interface PlayerScreenProps {
@@ -39,6 +43,8 @@ export function PlayerScreen({
     isShuffling: remoteShuffling,
     inFlightNumber,
   } = useTombolaDraws(room.id);
+  const { wins } = useTombolaWins(room.id);
+  const { players } = useRoomPlayers(room.id);
   const { muted } = useAudio();
   const [justDrew, setJustDrew] = useState(false);
   const [miniNumbers, setMiniNumbers] = useState<Array<number | null>>(
@@ -49,6 +55,10 @@ export function PlayerScreen({
   const [miniHighlightIndex, setMiniHighlightIndex] = useState<number | null>(
     null
   );
+  const [lastSeenWinId, setLastSeenWinId] = useState<string | null>(null);
+  const [recentWin, setRecentWin] = useState<
+    import("@/tombola").TombolaWin | null
+  >(null);
 
   const isNumberHit = (n: number) => drawnNumbers.includes(n);
 
@@ -172,10 +182,34 @@ export function PlayerScreen({
     };
   }, [inFlightNumber]);
 
+  // track wins and show a transient notification
+  React.useEffect(() => {
+    if (!wins || wins.length === 0) return;
+    const last = wins[wins.length - 1];
+    if (!last) return;
+    if (last.id === lastSeenWinId) return;
+    setLastSeenWinId(last.id);
+    setRecentWin(last);
+    // auto-clear after 6 seconds
+    const t = setTimeout(() => setRecentWin(null), 6000);
+    return () => clearTimeout(t);
+  }, [wins, lastSeenWinId]);
+
+  const getWinIndexedSlots = (winType?: string) => {
+    if (!winType) return [] as number[];
+    if (winType === "row1") return [0, 1, 2, 3, 4];
+    if (winType === "row2") return [5, 6, 7, 8, 9];
+    if (winType === "row3") return [10, 11, 12, 13, 14];
+    if (winType === "corners") return [0, 4, 10, 14];
+    if (winType === "full") return Array.from({ length: 15 }, (_, i) => i);
+    return [] as number[];
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
         <AudioToggle />
+        <PWAInstallButton />
         <button className="btn-secondary" onClick={onBackHome}>
           ⬅ Back home
         </button>
@@ -218,36 +252,84 @@ export function PlayerScreen({
                   </button>
                 </div>
                 <div className="player-card-grid">
-                  {selectedCard.card_numbers.map((n, idx) => (
-                    <div
-                      key={idx}
-                      className={
-                        "player-card-cell" + (isNumberHit(n) ? " hit" : "")
-                      }
-                    >
-                      <span className="cell-number">{n}</span>
-                    </div>
-                  ))}
+                  {selectedCard.card_numbers.map((n, idx) => {
+                    const highlightSlots =
+                      recentWin && recentWin.player_id === player.id
+                        ? getWinIndexedSlots(recentWin.win_type)
+                        : [];
+                    const isWinHighlight = highlightSlots.includes(idx);
+                    return (
+                      <div
+                        key={idx}
+                        className={
+                          "player-card-cell" +
+                          (isNumberHit(n) ? " hit" : "") +
+                          (isWinHighlight ? " win" : "")
+                        }
+                      >
+                        <span className="cell-number">{n}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
         </div>
       </header>
+      {recentWin && (
+        <div className="win-banner glass-card" role="status" aria-live="polite">
+          {recentWin.player_id === player.id ? (
+            <strong>
+              🎉 You won{" "}
+              {(() => {
+                const t = recentWin.win_type;
+                if (t.startsWith("admin_prize:")) return t.split(":")[1];
+                return getPrizeForKey(t as PrizeKey);
+              })()}{" "}
+              chips!
+            </strong>
+          ) : (
+            <strong>
+              {(() => {
+                const winner = players.find(
+                  (p) => p.id === recentWin.player_id
+                );
+                const t = recentWin.win_type;
+                const prize = t.startsWith("admin_prize:")
+                  ? Number(t.split(":")[1])
+                  : getPrizeForKey(t as PrizeKey);
+                return `${winner?.name ?? "A player"} won ${prize} chips!`;
+              })()}
+            </strong>
+          )}
+        </div>
+      )}
 
       <main className="player-layout">
         <section className="glass-card player-card">
           <h2 className="section-title">Your Card</h2>
 
           <div className="player-card-grid">
-            {card.numbers.map((n, idx) => (
-              <div
-                key={idx}
-                className={"player-card-cell" + (isNumberHit(n) ? " hit" : "")}
-              >
-                <span className="cell-number">{n}</span>
-              </div>
-            ))}
+            {card.numbers.map((n, idx) => {
+              const highlightSlots =
+                recentWin && recentWin.player_id === player.id
+                  ? getWinIndexedSlots(recentWin.win_type)
+                  : [];
+              const isWinHighlight = highlightSlots.includes(idx);
+              return (
+                <div
+                  key={idx}
+                  className={
+                    "player-card-cell" +
+                    (isNumberHit(n) ? " hit" : "") +
+                    (isWinHighlight ? " win" : "")
+                  }
+                >
+                  <span className="cell-number">{n}</span>
+                </div>
+              );
+            })}
           </div>
 
           <p className="helper-text">
@@ -467,6 +549,19 @@ export function PlayerScreen({
           )}
         </section>
       </main>
+      {/* Mobile primary actions sticky bottom */}
+      <div className="mobile-action-bar" aria-hidden="false">
+        {onOpenBuyModal && (
+          <button className="btn-primary" onClick={() => onOpenBuyModal()}>
+            💳 Buy
+          </button>
+        )}
+        {creditChips && (
+          <button className="btn-secondary" onClick={() => creditChips(100)}>
+            +100
+          </button>
+        )}
+      </div>
     </div>
   );
 }

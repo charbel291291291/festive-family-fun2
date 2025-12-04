@@ -38,6 +38,14 @@ export interface TombolaDraw {
   created_at: string;
 }
 
+export interface TombolaWin {
+  id: string;
+  room_id: string;
+  player_id: string;
+  win_type: string;
+  created_at: string;
+}
+
 export interface Wallet {
   id: string;
   user_id: string;

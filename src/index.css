@@ -13,6 +13,14 @@ body {
   color: #e5e7eb; /* slate-200 text */
 }
 
+/* Respect reduced motion preference for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* === DEAL OR NO DEAL SCREEN === */
 
 .deal-screen {
@@ -194,6 +202,17 @@ body {
     gap: 10px;
   }
 
+  @media (max-width: 480px) {
+    .deal-cases-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 360px) {
+    .deal-cases-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   .deal-case-btn {
     width: 64px;
     height: 64px;
@@ -232,9 +251,13 @@ body {
     padding: 8px;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(180deg, rgba(3,8,5,0.9), rgba(3,8,5,0.85));
+    background: linear-gradient(
+      180deg,
+      rgba(3, 8, 5, 0.9),
+      rgba(3, 8, 5, 0.85)
+    );
     border-radius: 14px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
     padding-bottom: env(safe-area-inset-bottom, 12px);
   }
   .deal-action-bar .btn-primary,
@@ -856,6 +879,14 @@ body {
   transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
 
+.btn-secondary:focus-visible,
+.btn-primary:focus-visible,
+.btn-danger:focus-visible,
+.btn-audio-toggle:focus-visible {
+  outline: 3px solid rgba(250, 204, 21, 0.6);
+  outline-offset: 2px;
+}
+
 .btn-audio-toggle {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -1170,6 +1201,144 @@ body {
   gap: 1.25rem;
 }
 
+/* === Mobile-specific global variables & helpers === */
+@media (max-width: 640px) {
+  :root {
+    --touch-pad: 14px;
+    --control-height: 52px;
+  }
+
+  /* Reduce container padding and center content on very small screens */
+  .app-container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-bottom: 6.25rem; /* leave room for sticky bottom bar */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  }
+
+  /* Compact header: smaller title & stack buttons to left */
+  .app-header {
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .app-header .title-glow {
+    font-size: 1.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Bigger touch targets for buttons */
+  .btn-secondary,
+  .btn-primary,
+  .btn-danger,
+  .btn-audio-toggle {
+    min-height: var(--control-height);
+    padding-left: calc(var(--touch-pad) * 0.6);
+    padding-right: calc(var(--touch-pad) * 0.6);
+    font-size: 0.95rem;
+  }
+
+  /* Larger inputs and selects on mobile for easier touch */
+  input[type="number"],
+  input[type="text"],
+  select,
+  .input-name {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Player card grid: 3 columns on small screens;
+     reduce font-size to keep cards readable while fitting on-screen */
+  .player-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+  .player-card-cell {
+    padding: 0.45rem;
+    font-size: 1rem;
+  }
+
+  /* Modal sizes: full width with limited margins */
+  .modal-card {
+    max-width: 95%;
+    width: 95%;
+    padding: 1rem;
+  }
+
+  /* Tombola machine: reduce size and ensure it's centered */
+  .tombola-wrapper .tombola-machine {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+  .last-ball .ball-number {
+    width: 3.6rem;
+    height: 3.6rem;
+    font-size: 1.35rem;
+  }
+  .mini-screen {
+    gap: 0.25rem;
+  }
+  .mini-screen-ball {
+    font-size: 0.85rem;
+  }
+
+  /* Admin layout stacks to single column by default for small screens */
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Sticky mobile action bar, visible on mobile for primary actions */
+  .mobile-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--control-height);
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+      to top,
+      rgba(2, 6, 3, 0.95),
+      rgba(2, 6, 3, 0.8)
+    );
+    box-shadow: 0 -6px 30px rgba(2, 6, 3, 0.8);
+    z-index: 9999;
+  }
+  .mobile-action-bar .btn-primary,
+  .mobile-action-bar .btn-danger,
+  .mobile-action-bar .btn-secondary {
+    flex: 1 1 auto;
+    max-width: 48%;
+    font-size: 1.05rem;
+  }
+
+  /* Reduce draw history numbers for mobile */
+  .draw-history-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+  .history-number {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+}
+
+/* Ultra small devices: 360px and below */
+@media (max-width: 360px) {
+  .player-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tombola-wrapper .tombola-machine {
+    max-width: 220px;
+  }
+  .title-glow {
+    font-size: 1rem;
+  }
+}
+
 .player-card-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1192,6 +1361,30 @@ body {
   border-color: rgba(34, 197, 94, 0.7);
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
   transform: scale(1.03);
+}
+
+.player-card-cell.win {
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.12),
+    rgba(245, 158, 11, 0.06)
+  );
+  border-color: rgba(245, 158, 11, 0.9);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.24);
+  transform: scale(1.06);
+}
+
+.win-banner {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: rgba(10, 74, 36, 0.9);
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
 .cell-number {

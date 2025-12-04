@@ -27,7 +27,7 @@ export async function buyTicketAtomic(
   gameId: string,
   cardNumbers: unknown,
   cost: number
-): Promise<{ ticket: any; wallet: Wallet } | null> {
+): Promise<{ ticket: unknown; wallet: Wallet } | null> {
   const { data, error } = await supabase.rpc("charge_and_create_ticket", {
     p_user_id: userId,
     p_game_id: gameId,
@@ -41,5 +41,5 @@ export async function buyTicketAtomic(
   if (!data) return null;
 
   // data contains { ticket: {...}, wallet: {...} }
-  return data as unknown as { ticket: any; wallet: Wallet };
+  return data as unknown as { ticket: unknown; wallet: Wallet };
 }

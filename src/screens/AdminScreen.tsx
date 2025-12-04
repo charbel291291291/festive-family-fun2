@@ -1,9 +1,20 @@
 import React, { useCallback, useState } from "react";
 import { supabase } from "@/supabase";
-import type { Room, Player, Wallet } from "@/tombola";
+import type {
+  Room,
+  Player,
+  Wallet,
+  TombolaCard,
+  TombolaDraw,
+  TombolaWin,
+} from "@/tombola";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { useTombolaDraws } from "@/hooks/useTombolaDraws";
+import { useTombolaWins } from "@/hooks/useTombolaWins";
 import { useRoomPlayers } from "@/hooks/useRoomPlayers";
 import { updateWalletAndInsertTransaction } from "@/lib/wallet";
+import { PRIZE_AMOUNTS } from "@/lib/tombolaPrizes";
+import detectTombolaWins from "@/lib/tombolaWinDetector";
 
 interface AdminScreenProps {
   room: Room;
@@ -58,6 +69,8 @@ export function AdminScreen({
 }: AdminScreenProps) {
   const { drawnNumbers, lastDraw } = useTombolaDraws(room.id);
 
+  // PRIZE_AMOUNTS imported from shared config
+
   // TTS is triggered explicitly when admin clicks Draw Next Ball
 
   const [isDrawing, setIsDrawing] = useState(false);
@@ -69,6 +82,7 @@ export function AdminScreen({
     loading: playersLoading,
     error: playersError,
   } = useRoomPlayers(room.id);
+  const { wins } = useTombolaWins(room.id);
   interface BuyRequest {
     id: string;
     name: string;
@@ -148,6 +162,102 @@ export function AdminScreen({
     }
   }, [room.id]);
 
+  const detectWinsForRoom = useCallback(
+    async (currentRoomId: string) => {
+      try {
+        // fetch drawn numbers for the room
+        const { data: drawsData, error: drawsErr } = await supabase
+          .from("tombola_draws")
+          .select("*")
+          .eq("room_id", currentRoomId)
+          .order("created_at", { ascending: true });
+        if (drawsErr) throw drawsErr;
+        const drawRows = (drawsData ?? []) as TombolaDraw[];
+        const drawnNums = drawRows.map((d) => d.number);
+
+        // fetch existing wins
+        const { data: winsData } = await supabase
+          .from("tombola_wins")
+          .select("*")
+          .eq("room_id", currentRoomId);
+        const existingWinsRows = (winsData ?? []) as TombolaWin[];
+        const existingWins = new Set(existingWinsRows.map((w) => w.win_type));
+
+        // fetch cards in the room (include player id)
+        const cardsResp = await supabase
+          .from("tombola_cards")
+          .select("*, players(id, name)")
+          .eq("room_id", currentRoomId);
+        const cards = (cardsResp.data ?? []) as (TombolaCard & {
+          players?: Player;
+        })[];
+
+        if (!cards) return;
+
+        // helper: check card numbers against drawn
+        const isRowComplete = (nums: number[], row: number) => {
+          const start = (row - 1) * 5;
+          const indexes = [0, 1, 2, 3, 4].map((i) => nums[start + i]);
+          return indexes.every((n) => drawnNums.includes(n));
+        };
+        const isCornersComplete = (nums: number[]) => {
+          const corners = [nums[0], nums[4], nums[10], nums[14]];
+          return corners.every((n) => drawnNums.includes(n));
+        };
+        const isFull = (nums: number[]) =>
+          nums.every((n) => drawnNums.includes(n));
+
+        // Use the pure detector to find pending wins
+        const detected = detectTombolaWins(cards, drawnNums, existingWins);
+        for (const d of detected) {
+          try {
+            // resolve player id: prefer player_id property already present
+            const playerId = d.player_id;
+            if (!playerId) continue;
+            // find profile by player name if available
+            const card = cards.find((c) => String(c.id) === String(d.card_id));
+            const playerName = (
+              card as (TombolaCard & { players?: Player }) | undefined
+            )?.players?.name;
+
+            // Attempt to atomically claim the win on the server; this RPC inserts the win
+            // and performs wallet updates inside a DB-side transaction to prevent races.
+            try {
+              const { data: rpcRes, error: rpcErr } = await supabase.rpc(
+                "claim_tombola_win",
+                {
+                  p_room_id: currentRoomId,
+                  p_win_type: d.win_type,
+                  p_card_id: d.card_id,
+                  p_player_id: playerId,
+                  p_prize: d.prize,
+                  p_system_wallet_user_id: systemWalletUserId ?? null,
+                }
+              );
+              if (rpcErr) throw rpcErr;
+              // rpcRes contains the win row (inserted or existing). Wallet updates are handled server-side.
+            } catch (err) {
+              console.warn(
+                "Failed to claim tombola win (atomic RPC)",
+                d.win_type,
+                err
+              );
+            }
+          } catch (err) {
+            console.warn(
+              "Failed to register automatic win for pattern",
+              d.win_type,
+              err
+            );
+          }
+        }
+      } catch (err) {
+        console.error("detectWinsForRoom error:", err);
+      }
+    },
+    [systemWalletUserId]
+  );
+
   const handleDrawNext = useCallback(async () => {
     if (status !== "running") {
       alert("Game is not running yet.");
@@ -174,13 +284,19 @@ export function AdminScreen({
       // 🔥 Speak only when admin clicks draw
       speakNumber(nextNumber);
       // realtime hook will update everyone
+      // After the draw, detect and register wins for this room
+      try {
+        await detectWinsForRoom(room.id);
+      } catch (e) {
+        console.warn("detectWinsForRoom failed:", e);
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to draw next ball");
     } finally {
       setIsDrawing(false);
     }
-  }, [room.id, isDrawing, remainingNumbers, status]);
+  }, [room.id, isDrawing, remainingNumbers, status, detectWinsForRoom]);
 
   // --- give chips prize to a player ---
   const handleGivePrize = useCallback(async () => {
@@ -355,6 +471,7 @@ export function AdminScreen({
         <button className="btn-secondary" onClick={onBackHome}>
           ⬅ Back home
         </button>
+        <PWAInstallButton />
         <h1 className="title-glow">🎄 Festive Family Tombola (Host)</h1>
       </header>
 
@@ -804,6 +921,35 @@ export function AdminScreen({
                     </li>
                   ))}
                 </ul>
+                <div className="mt-3">
+                  <label className="block text-slate-200 mb-2">
+                    Recent wins
+                  </label>
+                  {(!wins || wins.length === 0) && (
+                    <p className="text-xs text-slate-300">
+                      No wins yet this round.
+                    </p>
+                  )}
+                  {wins && wins.length > 0 && (
+                    <ul className="space-y-1 text-xs text-slate-200">
+                      {wins.map((w) => (
+                        <li
+                          key={w.id}
+                          className="flex justify-between items-center"
+                        >
+                          <span>
+                            {w.win_type} •{" "}
+                            {players.find((p) => p.id === w.player_id)?.name ??
+                              w.player_id}
+                          </span>
+                          <span className="text-slate-400">
+                            {new Date(w.created_at).toLocaleTimeString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </>
             )}
 
@@ -815,6 +961,38 @@ export function AdminScreen({
           </div>
         </section>
       </main>
+      {/* Mobile primary actions sticky bottom */}
+      <div className="mobile-action-bar" aria-hidden="false">
+        {status === "lobby" && (
+          <button className="btn-primary" onClick={handleStartGame}>
+            ▶ Start
+          </button>
+        )}
+        {status === "running" && (
+          <>
+            <button
+              className="btn-primary"
+              onClick={handleDrawNext}
+              disabled={isDrawing || remainingNumbers.length === 0}
+            >
+              🎱 Draw
+            </button>
+            <button className="btn-danger" onClick={handleFinishGame}>
+              ⏹ End
+            </button>
+          </>
+        )}
+        {status === "finished" && (
+          <button
+            className="btn-secondary"
+            onClick={() =>
+              alert("Game finished – create a new room for a new round.")
+            }
+          >
+            ✅ Finished
+          </button>
+        )}
+      </div>
     </div>
   );
 }
